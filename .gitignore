@@ -1,0 +1,5 @@
+*.o
+mysh
+/.cache/
+/compile_commands.json
+/build/
