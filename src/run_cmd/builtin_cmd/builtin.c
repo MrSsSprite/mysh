@@ -14,6 +14,7 @@
 /*----------------------- Private Function Prototypes ------------------------*/
 int mysh_exit(int argc, char **argv);
 int mysh_echo(int argc, char **argv);
+int mysh_pwd(int argc, char **argv);
 int mysh_type(int argc, char **argv);
 /*--------------------- Private Function Prototypes END ----------------------*/
 
@@ -22,6 +23,7 @@ const struct fn_map builtin_fn_map[] =
 {
    { .name = "echo", .fn = &mysh_echo },
    { .name = "exit", .fn = &mysh_exit },
+   { .name = "pwd",  .fn = &mysh_pwd },
    { .name = "type", .fn = &mysh_type },
 };
 const size_t builtin_fn_map_sz = sizeof builtin_fn_map / sizeof *builtin_fn_map;
@@ -79,6 +81,14 @@ int mysh_echo(int argc, char **argv)
    }
    putchar('\n');
 
+   return 0;
+}
+
+int mysh_pwd(int argc, char **argv)
+{
+   char *pwd = getenv("PWD");
+   if (pwd == NULL) return 1;
+   puts(pwd);
    return 0;
 }
 
