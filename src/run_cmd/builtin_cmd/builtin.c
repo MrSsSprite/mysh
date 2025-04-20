@@ -12,6 +12,7 @@
 /*--------------------------- Private Defines END ----------------------------*/
 
 /*----------------------- Private Function Prototypes ------------------------*/
+int mysh_cd(int argc, char **argv);
 int mysh_exit(int argc, char **argv);
 int mysh_echo(int argc, char **argv);
 int mysh_pwd(int argc, char **argv);
@@ -21,6 +22,7 @@ int mysh_type(int argc, char **argv);
 /*----------------------------- Public Variables -----------------------------*/
 const struct fn_map builtin_fn_map[] =
 {
+   { .name = "cd",   .fn = &mysh_cd },
    { .name = "echo", .fn = &mysh_echo },
    { .name = "exit", .fn = &mysh_exit },
    { .name = "pwd",  .fn = &mysh_pwd },
@@ -35,6 +37,23 @@ static size_t full_path_sz = 0;
 /*-------------------------- Private Variables END ---------------------------*/
 
 /*---------------------------- Private Functions -----------------------------*/
+int mysh_cd(int argc, char **argv)
+{
+   int err_code;
+
+   if (argc == 1)
+      return 0;
+   if (argc == 2)
+   {
+      err_code = chdir(argv[1]);
+      if (err_code)
+         printf("cd: %s: No such file or directory\n", argv[1]);
+      return err_code;
+   }
+   puts("cd: too many arguments");
+   return 1;
+}
+
 int mysh_exit(int argc, char **argv)
 {
    long exit_code;
@@ -86,9 +105,10 @@ int mysh_echo(int argc, char **argv)
 
 int mysh_pwd(int argc, char **argv)
 {
-   char *pwd = getenv("PWD");
+   char *pwd = getcwd(NULL, 0);
    if (pwd == NULL) return 1;
    puts(pwd);
+   free(pwd);
    return 0;
 }
 
