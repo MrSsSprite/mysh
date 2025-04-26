@@ -12,7 +12,8 @@ extern size_t mysh_argv_sz;
 /*--------------------- Public Variable Declarations END ---------------------*/
 
 /*------------------------ Public Function Prototypes ------------------------*/
-int parse_cmd_args(char *input);
+void parse_cli_input_cleanup(void);
+int parse_cmd_args(const char *input);
 /*---------------------- Public Function Prototypes END ----------------------*/
 
 #endif

@@ -19,6 +19,7 @@ static size_t input_buf_sz = 0u;
 
 /*----------------------- Private Function Prototypes ------------------------*/
 static int input_request(void);
+static int main_init(void);
 static void main_cleanup(void);
 /*--------------------- Private Function Prototypes END ----------------------*/
 
@@ -28,6 +29,13 @@ int main(void)
    int err_code;
    const struct fn_map *fn_ptr;
    const char *exec_path;
+
+   err_code = main_init();
+   if (err_code)
+   {
+      fprintf(stderr, "Failed to initialize: err_code=%d\n", err_code);
+      return -1;
+   }
 
    while ((err_code = input_request()))
    {
@@ -47,7 +55,6 @@ int main(void)
       case 2:
          continue;
       default:
-         fputs("Designed Error: This place should not be reached\n", stderr);
          exit(2);
       }
 
@@ -102,11 +109,15 @@ static int input_request(void)
    }
 }
 
+static int main_init(void)
+{
+   return 0;
+}
+
 static void main_cleanup(void)
 {
    builtin_cleanup();
-   free(mysh_argv);
-   mysh_argv_sz = 0u;
+   parse_cli_input_cleanup();
    free(input_buf);
    input_buf_sz = 0u;
 }
