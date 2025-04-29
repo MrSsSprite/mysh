@@ -29,16 +29,18 @@ int parse_cmd_args(const char *input)
    const char *envar;
    int i, ret = 0;
 
-   if (str) vector_destroy(str);
    free(mysh_argv);
    mysh_argv = NULL;
    if (input == NULL)
    {
+      vector_destroy(str);
       str = NULL;
       return 0;
    }
-   str = vector_init(char);
-   if (str == NULL) return 1;
+   if (str && vector_resize(str, 2u))
+      return 1;
+   else if ((str = vector_init(char)) == NULL)
+      return 1;
 
    arg_idx = vector_init(int);
    if (arg_idx == NULL) return 1;
@@ -108,6 +110,11 @@ COPY_CHAR:
    }
 END_LOOP:
 
+   if (vector_size(str) == 0)
+   {
+      mysh_argc = 0;
+      goto ENDING_SECTION;
+   }
    /* end str with '\0' */
    vector_push(str, "\0");
    /* TODO: assign approriate values to mysh_argc and mysh_argv */

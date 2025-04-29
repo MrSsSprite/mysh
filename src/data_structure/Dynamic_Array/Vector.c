@@ -101,6 +101,11 @@ int vector_erase(struct vector *this, void *first, size_t n)
    /* shrink size (the function check whether it's necessary) */
    return _vector_shrink(this);
 }
+
+int vector_resize(struct vector *this, size_t new_size)
+{
+   return _vector_resize(this, new_size * this->elem_sz);
+}
 /*-------------------------- Exported Functions END --------------------------*/
 
 /*---------------------------- Private Functions -----------------------------*/

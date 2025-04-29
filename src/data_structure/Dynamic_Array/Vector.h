@@ -25,6 +25,7 @@ int vector_pop(struct vector *this);
 int vector_insert(struct vector *this, void *restrict dest,
                   const void *restrict first, size_t n);
 int vector_erase(struct vector *this, void *first, size_t n);
+int vector_resize(struct vector *this, size_t new_size);
 
 void *vector_begin(struct vector *this);
 void *vector_end(struct vector *this);

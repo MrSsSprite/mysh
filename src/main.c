@@ -58,6 +58,8 @@ int main(void)
          exit(2);
       }
 
+      if (mysh_argc == 0)
+         continue;
       if ((fn_ptr = builtin_fn_find(mysh_argv[0])))
          fn_ptr->fn(mysh_argc, mysh_argv);
       else if ((exec_path = find_exe_full_path(mysh_argv[0])))
@@ -83,6 +85,8 @@ static int input_request(void)
       ch = getchar();
       if (ch == '\n')
          ch = '\0';
+      else if (ch == '\\')
+         ch = getchar();
       else if (ch == EOF)
       {
          if (i == 0)
