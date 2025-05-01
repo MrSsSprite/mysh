@@ -3,3 +3,4 @@ mysh
 /.cache/
 /compile_commands.json
 /build/
+/test_inputs/

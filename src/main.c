@@ -55,7 +55,7 @@ int main(void)
       case 2:
          continue;
       default:
-         exit(2);
+         exit(err_code);
       }
 
       if (mysh_argc == 0)
@@ -78,22 +78,40 @@ static int input_request(void)
 {
    char ch;
    size_t i = 0u;
+   int in_squotes = 0, in_dquotes = 0, escaped = 0;
 
    fputs("$ ", stdout);
    while (1)
    {
       ch = getchar();
-      if (ch == '\n')
-         ch = '\0';
-      else if (ch == '\\')
-         ch = getchar();
-      else if (ch == EOF)
+      if (escaped) goto NO_PRETREATMENT;
+      switch (ch)
       {
+      case '\n':
+         if (!(in_squotes || in_dquotes))
+            ch = '\0';
+         break;
+      case '\\':
+         if (!in_squotes) escaped = 2;
+         break;
+      case '\"':
+         in_dquotes ^= 1;
+         break;
+      case '\'':
+         in_squotes ^= 1;
+         break;
+      case EOF:
          if (i == 0)
             return 0;
          else
             ch = '\0';
+         break;
+      default:
+         break;
       }
+NO_PRETREATMENT:
+      escaped >>= 1;
+
       if (i == input_buf_sz)
       {
          size_t new_sz = input_buf_sz ? input_buf_sz * 2u :

@@ -2,11 +2,14 @@
 #include "parse_cli_input.h"
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "Vector.h"
 /*--------------------------- Private Includes END ---------------------------*/
 
 /*----------------------- Private Function Prototypes ------------------------*/
 static inline char *varnmdup(const char **ptr);
+static inline int parse_envar(const char **in_iter, Vector str);
+static inline int parse_dquote(const char **in_iter, Vector str);
 /*--------------------- Private Function Prototypes END ----------------------*/
 
 /*----------------------------- Public Variables -----------------------------*/
@@ -25,9 +28,9 @@ int parse_cmd_args(const char *input)
    static Vector str = NULL;
    Vector arg_idx;
    const char *in_iter;
-   char *var_nm, **argv_iter;
+   char **argv_iter;
    const char *envar;
-   int i, ret = 0;
+   int i, ret = 0, err_code;
 
    free(mysh_argv);
    mysh_argv = NULL;
@@ -50,25 +53,19 @@ int parse_cmd_args(const char *input)
       switch (*in_iter)
       {
       case '$':
-         in_iter++;
-         if (*in_iter == ' ')
+         err_code = parse_envar(&in_iter, str);
+         switch (err_code)
          {
-            in_iter--;
-            goto COPY_CHAR;
-         }
-         var_nm = varnmdup(&in_iter);
-         if (var_nm == NULL)
-         {
+         case 1:
             ret = 1;
             goto ENDING_SECTION;
-         }
-         envar = getenv(var_nm);
-         free(var_nm);
-         if (envar == NULL) continue;
-         if (vector_insert(str, vector_end(str), envar, strlen(envar)))
-         {
-            ret = 1;
+         case 2:
+            continue;
+         default:
+            ret = -1;
             goto ENDING_SECTION;
+         case 0:
+            break;
          }
          break;
       case '~':
@@ -96,10 +93,25 @@ int parse_cmd_args(const char *input)
          i = vector_size(str);
          vector_push(arg_idx, &i);
          break;
+      case '\'':
+         for (in_iter++; *in_iter != '\''; in_iter++)
+         {
+            if (*in_iter == '\0') return 2;
+            vector_push(str, in_iter);
+         }
+         in_iter++;
+         break;
+      case '\"':
+         err_code = parse_dquote(&in_iter, str);
+         if (err_code)
+         {
+            ret = err_code;
+            goto ENDING_SECTION;
+         }
+         break;
       case '\\':
          in_iter++;
       default:
-COPY_CHAR:
          if (vector_push(str, in_iter++))
          {
             ret = 1;
@@ -146,7 +158,7 @@ static inline char *varnmdup(const char **ptr)
    size_t ret_len;
    char *ret;
 
-   for (ed = *ptr; *ed != '\0' && *ed != ' ' && *ed != '/'; ed++) ;
+   for (ed = *ptr; isalnum(*ed) || *ed == '_'; ed++) ;
    ret_len = ed - *ptr;
    ret = malloc(ret_len + 1);
 
@@ -155,5 +167,80 @@ static inline char *varnmdup(const char **ptr)
    ret[ret_len] = '\0';
    *ptr = ed;
    return ret;
+}
+
+static inline int parse_envar(const char **in_iter, Vector str)
+{
+   char *var_nm;
+   const char *envar;
+
+   ++*in_iter;
+   if (**in_iter == ' ')
+   {
+      if (vector_push(str, "$")) return 1;
+      return 0;
+   }
+   var_nm = varnmdup(in_iter);
+   if (var_nm == NULL) return 1;
+   envar = getenv(var_nm);
+   free(var_nm);
+   if (envar == NULL) return 2;
+   if (vector_insert(str, vector_end(str), envar, strlen(envar)))
+      return 1;
+
+   return 0;
+}
+
+static inline int parse_dquote(const char **in_iter, Vector str)
+{
+   int err_code;
+   int ch, tmpch;
+   int escaped = 0;
+
+   ++*in_iter;
+   while (1)
+   {
+      if (escaped)
+      {
+         escaped = 0;
+         goto DEFAULT_CASE;
+      }
+      switch ((ch = **in_iter))
+      {
+      case '$':
+         err_code = parse_envar(in_iter, str);
+         switch (err_code)
+         {
+         case 1:  return 1;
+         case 2:  continue;
+         default: return -1;
+         case 0:  break;
+         }
+         break;
+      case '`':
+         /* TODO */
+         ++*in_iter;
+         break;
+      case '\\':
+         tmpch = *(*in_iter + 1);
+         if (tmpch == '$' || tmpch == '`' || tmpch == '\"' || tmpch == '\\' ||
+             tmpch == '\n')
+         {
+            escaped = 1;
+            ++*in_iter;
+         }
+         else goto DEFAULT_CASE;
+         break;
+      case '\"':
+         ++*in_iter;
+         return 0;
+      case '\0':
+         return -1;
+DEFAULT_CASE:
+      default:
+         if (vector_push(str, (*in_iter)++)) return 1;
+         break;
+      }
+   }
 }
 /*-------------------------- Private Functions END ---------------------------*/
