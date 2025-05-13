@@ -29,6 +29,9 @@ int vector_resize(struct vector *this, size_t new_size);
 
 void *vector_begin(struct vector *this);
 void *vector_end(struct vector *this);
+
+void *vector_release(struct vector *this);
+int vector_shrink_to_fit(struct vector *this);
 /*---------------------- Public Function Prototypes END ----------------------*/
 
 #endif

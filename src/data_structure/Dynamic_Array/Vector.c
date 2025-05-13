@@ -106,9 +106,26 @@ int vector_resize(struct vector *this, size_t new_size)
 {
    return _vector_resize(this, new_size * this->elem_sz);
 }
+
+void *vector_release(struct vector *this)
+{
+   void *ret = this->st;
+   this->st = this->cav = this->ed = NULL;
+   this->elem_sz = 0u;
+   return ret;
+}
+
+int vector_shrink_to_fit(struct vector *this)
+{ return _vector_resize(this, this->cav - this->st); }
 /*-------------------------- Exported Functions END --------------------------*/
 
 /*---------------------------- Private Functions -----------------------------*/
+/**
+ * @brief   resize the vector to have a capacity of new_size bytes
+ * @param   this: the vector
+ * @param   new_size: new size in bytes
+ * @retval  error_code: 0 if succeeded; non-0 otherwise
+ */
 static int _vector_resize(struct vector *this, size_t new_size)
 {
    void *new_mem;

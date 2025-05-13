@@ -5,6 +5,7 @@
 #include "builtin.h"
 #include "external_program.h"
 #include "parse_cli_input.h"
+#include "redirection.h"
 /*--------------------------- Private Includes END ---------------------------*/
 
 /*----------------------------- Private Defines ------------------------------*/
@@ -58,6 +59,13 @@ int main(void)
          exit(err_code);
       }
 
+      err_code = redirect_vec(parsed_redir_table);
+      if (err_code)
+      {
+         fputs("redirection error\n", stderr);
+         return err_code;
+      }
+
       if (mysh_argc == 0)
          continue;
       if ((fn_ptr = builtin_fn_find(mysh_argv[0])))
@@ -66,6 +74,13 @@ int main(void)
          fork_exec_cmd(exec_path, mysh_argc, mysh_argv);
       else
          printf("%s: command not found\n", mysh_argv[0]);
+
+      err_code = redir_recover();
+      if (err_code)
+      {
+         fputs("redirection recovery error\n", stderr);
+         return err_code;
+      }
    }
 
    main_cleanup();
@@ -133,6 +148,7 @@ NO_PRETREATMENT:
 
 static int main_init(void)
 {
+   if (redirect_init()) return 1;
    return 0;
 }
 
@@ -140,6 +156,7 @@ static void main_cleanup(void)
 {
    builtin_cleanup();
    parse_cli_input_cleanup();
+   redirect_cleanup();
    free(input_buf);
    input_buf_sz = 0u;
 }

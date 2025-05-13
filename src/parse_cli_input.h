@@ -9,6 +9,7 @@
 extern int mysh_argc;
 extern char **mysh_argv;
 extern size_t mysh_argv_sz;
+extern void *parsed_redir_table;
 /*--------------------- Public Variable Declarations END ---------------------*/
 
 /*------------------------ Public Function Prototypes ------------------------*/
