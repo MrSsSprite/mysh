@@ -35,6 +35,7 @@ struct vector *vector_init_elem_sz(size_t elem_sz)
 
 void vector_destroy(struct vector *this)
 {
+   if (this == NULL) return;
    free(this->st);
    free(this);
 }

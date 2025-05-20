@@ -2,7 +2,6 @@
 #include "redirection.h"
 #include <stdio.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <unistd.h>
 #include "List.h"
 /*--------------------------- Private Includes END ---------------------------*/
@@ -85,26 +84,21 @@ int redirect(struct redir_info info)
 
    if (info.type & REDIR_PATH_FD)
    {
-      oflags = O_CREAT;
-      switch (info.type & (REDIR_INPUT | REDIR_OUTPUT))
+      if (info.type & REDIR_OUTPUT)
       {
-      case REDIR_INPUT:
-         oflags |= O_RDONLY;
-         break;
-      case REDIR_OUTPUT:
-         oflags |= O_WRONLY;
-         break;
-      case REDIR_INPUT | REDIR_OUTPUT:
-         oflags |= O_RDWR;
-         break;
-      default:
-         return 30;
-      }
+         oflags = O_CREAT;
+         if (info.type & REDIR_APPEND)
+            oflags |= O_APPEND;
+         else
+            oflags |= O_TRUNC;
 
-      if (info.type & REDIR_APPEND)
-         oflags |= O_APPEND;
+         if (info.type & REDIR_INPUT)
+            oflags |= O_RDWR;
+         else
+            oflags |= O_WRONLY;
+      }
       else
-         oflags |= O_TRUNC;
+         oflags = O_RDONLY;
 
       tmp_fd = open(info.filename, oflags, 0754);
       if (tmp_fd == -1)

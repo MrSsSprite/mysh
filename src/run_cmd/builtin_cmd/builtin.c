@@ -17,6 +17,8 @@ int mysh_exit(int argc, char **argv);
 int mysh_echo(int argc, char **argv);
 int mysh_pwd(int argc, char **argv);
 int mysh_type(int argc, char **argv);
+static inline int full_path_resize(size_t new_size);
+static inline void full_path_free(void);
 /*--------------------- Private Function Prototypes END ----------------------*/
 
 /*----------------------------- Public Variables -----------------------------*/
@@ -35,6 +37,129 @@ const size_t builtin_fn_map_sz = sizeof builtin_fn_map / sizeof *builtin_fn_map;
 static char *full_path = NULL;
 static size_t full_path_sz = 0;
 /*-------------------------- Private Variables END ---------------------------*/
+
+
+/*---------------------------- Exported Functions ----------------------------*/
+const struct fn_map *builtin_fn_find(const char *fn_name)
+{
+   const struct fn_map *iter, *const ed = builtin_fn_map + builtin_fn_map_sz;
+
+   for (iter = builtin_fn_map; iter < ed; iter++)
+      if (strcmp(fn_name, iter->name) == 0) break;
+   if (iter == ed)
+      return NULL;
+   else
+      return iter;
+}
+
+void builtin_cleanup(void)
+{
+   free(full_path);
+   full_path_sz = 0u;
+}
+
+/**
+ * @brief   return full path of a command's executable file, if any.
+ *          PATH env is used
+ * @param   cmd: command name
+ * @return  the full path. (\c NULL if not found or any error occurred)
+ * @remark  do not free the returned address directly
+ */
+char *find_exe_full_path(const char *cmd)
+{
+   int success = 0;
+   const char *PATH;
+   char *path;
+   size_t fp_len;
+   long path_max;
+
+   if (cmd[0] == '/')
+   {
+      free(full_path);
+      full_path = strdup(cmd);
+      if (full_path == NULL)
+      {
+         full_path_sz = 0;
+         return NULL;
+      }
+      full_path_sz = strlen(cmd);
+      if (access(full_path, X_OK) == 0)
+         return full_path;
+      full_path_free();
+      return NULL;
+   }
+   if (cmd[0] == '.' && cmd[1] == '/')
+   {
+      free(full_path);
+      path_max = pathconf(cmd, _PC_PATH_MAX);
+      if (path_max == -1)
+         path_max = PATH_MAX;
+
+      full_path = getcwd(NULL, path_max);
+      full_path_sz = path_max;
+      if (full_path == NULL)
+      {
+         full_path_sz = 0;
+         return NULL;
+      }
+      strcat(full_path, cmd + 1);
+      if (access(full_path, X_OK) == 0)
+         return full_path;
+      full_path_free();
+      return NULL;
+   }
+
+   PATH = getenv("PATH");
+   if (PATH == NULL) return NULL;
+   path = strdup(PATH);
+   if (path == NULL) return NULL;
+
+   for (const char *dir = strtok(path, ":"); dir; dir = strtok(NULL, ":"))
+   {
+FP_ASSIGNMENT:
+      fp_len = snprintf(full_path, full_path_sz,
+                        dir[strlen(dir) - 1] == '/' ? "%s%s" : "%s/%s",
+                        dir, cmd)
+               + 1;
+      if (fp_len > full_path_sz)
+      {
+         if (full_path_resize(fp_len))
+            goto ENDING_SECTION;
+         goto FP_ASSIGNMENT;
+      }
+
+      if (access(full_path, X_OK) == 0)
+      {
+         success = 1;
+         break;
+      }
+   }
+
+ENDING_SECTION:
+   free(path);
+   if (success)
+   {
+      /* shrink memory allocated for full_path so that it does not occupy
+       * large space after occational long path */
+      if (full_path_sz > RECOMMANDED_FULLPATH_SIZE &&
+          fp_len < RECOMMANDED_FULLPATH_SIZE &&
+          (path = realloc(full_path, RECOMMANDED_FULLPATH_SIZE)))
+      {
+         full_path = path;
+         full_path_sz = RECOMMANDED_FULLPATH_SIZE;
+      }
+      return full_path;
+   }
+   else
+   {
+      free(full_path);
+      full_path = NULL;
+      full_path_sz = 0;
+      return NULL;
+   }
+}
+/*-------------------------- Exported Functions END --------------------------*/
+
 
 /*---------------------------- Private Functions -----------------------------*/
 int mysh_cd(int argc, char **argv)
@@ -135,87 +260,24 @@ int mysh_type(int argc, char **argv)
 
    return has_failure;
 }
-/*-------------------------- Private Functions END ---------------------------*/
 
-/*---------------------------- Exported Functions ----------------------------*/
-const struct fn_map *builtin_fn_find(const char *fn_name)
-{
-   const struct fn_map *iter, *const ed = builtin_fn_map + builtin_fn_map_sz;
-
-   for (iter = builtin_fn_map; iter < ed; iter++)
-      if (strcmp(fn_name, iter->name) == 0) break;
-   if (iter == ed)
-      return NULL;
-   else
-      return iter;
-}
-
-void builtin_cleanup(void)
+static inline int full_path_resize(size_t new_len)
 {
    free(full_path);
-   full_path_sz = 0u;
+   full_path = malloc(new_len);
+   if (full_path == NULL)
+   {
+      full_path_sz = 0u;
+      return 1;
+   }
+   full_path_sz = new_len;
+   return 0;
 }
 
-/**
- * @brief   return full path of a command's executable file, if any.
- *          PATH env is used
- * @param   cmd: command name
- * @return  the full path. (\c NULL if not found or any error occurred)
- * @remark  do not free the returned address directly
- */
-char *find_exe_full_path(const char *cmd)
+static inline void full_path_free(void)
 {
-   int success = 0;
-   const char *PATH = getenv("PATH");
-   char *path;
-   size_t fp_len;
-
-   if (PATH == NULL) return NULL;
-   path = strdup(PATH);
-   if (path == NULL) return NULL;
-
-   for (const char *dir = strtok(path, ":"); dir; dir = strtok(NULL, ":"))
-   {
-FP_ASSIGNMENT:
-      fp_len = snprintf(full_path, full_path_sz,
-                        dir[strlen(dir) - 1] == '/' ? "%s%s" : "%s/%s",
-                        dir, cmd)
-               + 1;
-      if (fp_len > full_path_sz)
-      {
-         free(full_path);
-         full_path = malloc(fp_len);
-         if (full_path == NULL)
-         {
-            full_path_sz = 0u;
-            break;
-         }
-         full_path_sz = fp_len;
-         goto FP_ASSIGNMENT;
-      }
-
-      if (access(full_path, X_OK) == 0)
-      {
-         success = 1;
-         break;
-      }
-   }
-
-   free(path);
-   if (success)
-   {
-      /* shrink memory allocated for full_path so that it does not occupy
-       * large space after occational long path */
-      if (full_path_sz > RECOMMANDED_FULLPATH_SIZE &&
-          fp_len < RECOMMANDED_FULLPATH_SIZE &&
-          (path = realloc(full_path, RECOMMANDED_FULLPATH_SIZE)))
-      {
-         full_path = path;
-         full_path_sz = RECOMMANDED_FULLPATH_SIZE;
-      }
-      return full_path;
-   }
-   else
-      return NULL;
+   free(full_path);
+   full_path = NULL;
+   full_path_sz = 0;
 }
-/*-------------------------- Exported Functions END --------------------------*/
+/*-------------------------- Private Functions END ---------------------------*/

@@ -28,6 +28,8 @@ void list_destroy(struct list *this)
    struct list_node *iter[2];
    int i = 0;
 
+   if (this == NULL) return;
+
    iter[0] = this->head;
    while (iter[i])
    {
