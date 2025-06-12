@@ -1,11 +1,11 @@
 /*----------------------------- Private Includes -----------------------------*/
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include "builtin.h"
 #include "external_program.h"
 #include "parse_cli_input.h"
 #include "redirection.h"
+#include "input_request.h"
 /*--------------------------- Private Includes END ---------------------------*/
 
 /*----------------------------- Private Defines ------------------------------*/
@@ -14,12 +14,9 @@
 /*--------------------------- Private Defines END ----------------------------*/
 
 /*---------------------------- Private Variables -----------------------------*/
-static char *input_buf = NULL;
-static size_t input_buf_sz = 0u;
 /*-------------------------- Private Variables END ---------------------------*/
 
 /*----------------------- Private Function Prototypes ------------------------*/
-static int input_request(void);
 static int main_init(void);
 static void main_cleanup(void);
 /*--------------------- Private Function Prototypes END ----------------------*/
@@ -38,7 +35,7 @@ int main(void)
       return -1;
    }
 
-   while ((err_code = input_request()))
+   while ((err_code = input_request()) == 0)
    {
       if (err_code < 0)
       {
@@ -89,66 +86,10 @@ int main(void)
 
 
 /*---------------------------- Private Functions -----------------------------*/
-static int input_request(void)
-{
-   char ch;
-   size_t i = 0u;
-   int in_squotes = 0, in_dquotes = 0, escaped = 0;
-
-   fputs("$ ", stdout);
-   while (1)
-   {
-      ch = getchar();
-      if (escaped) goto NO_PRETREATMENT;
-      switch (ch)
-      {
-      case '\n':
-         if (!(in_squotes || in_dquotes))
-            ch = '\0';
-         break;
-      case '\\':
-         if (!in_squotes) escaped = 2;
-         break;
-      case '\"':
-         in_dquotes ^= 1;
-         break;
-      case '\'':
-         in_squotes ^= 1;
-         break;
-      case EOF:
-         if (i == 0)
-            return 0;
-         else
-            ch = '\0';
-         break;
-      default:
-         break;
-      }
-NO_PRETREATMENT:
-      escaped >>= 1;
-
-      if (i == input_buf_sz)
-      {
-         size_t new_sz = input_buf_sz ? input_buf_sz * 2u :
-                                        RECOMMANDED_INPUTBUF_SIZE;
-         void *tmp = realloc(input_buf, new_sz);
-         if (tmp)
-         {
-            input_buf = tmp;
-            input_buf_sz = new_sz;
-         }
-         else
-            return -1;
-      }
-
-      input_buf[i++] = ch;
-      if (ch == '\0') return 1;
-   }
-}
-
 static int main_init(void)
 {
    if (redirect_init()) return 1;
+   if (input_request_init()) return 2;
    return 0;
 }
 

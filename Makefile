@@ -67,6 +67,8 @@ $(shell find $(SRC_DIR) -type d -exec echo -I{} \;)
 
 CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
+COMPILE_FLAGS += -lreadline
+
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
 endif
@@ -88,7 +90,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET): $(OBJECTS) Makefile
-	$(CC) $(OBJECTS) -o $@
+	$(CC) $(COMPILE_FLAGS) $(OBJECTS) -o $@
 
 $(TARGET): $(BUILD_DIR)/$(TARGET)
 	cp $(BUILD_DIR)/$(TARGET) $(TARGET)
