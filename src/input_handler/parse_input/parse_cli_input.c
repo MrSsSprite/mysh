@@ -74,15 +74,26 @@ int parse_cmd_args(const char *input)
          break;
       case 10:
          if (in_arg)
-         {
+          {
             i = vector_size(str);
             vector_push(arg_idx, &i);
-         }
-         in_arg = 0;
+            in_arg = 0;
+          }
          break;
       case 11:
-         in_arg = 0;
+         if (in_arg && vector_size(arg_idx) == 0)
+          {
+            i = vector_size(str) + 1;
+            if (vector_push(str, "\0") || vector_push(arg_idx, &i))
+             {
+                ret = 1;
+                goto ENDING_SECTION;
+             }
+            in_arg = 0;
+          }
          ret = parse_redirection(&in_iter, str);
+         while (ret == 11)
+            ret = parse_redirection(&in_iter, NULL);
          if (ret == 10)
          {
             i = vector_size(str);
@@ -120,11 +131,15 @@ int parse_cmd_args(const char *input)
       mysh_argc = 0;
       goto ENDING_SECTION;
    }
+   /* end str with '\0' */
    if (in_arg)
-   {
-      /* end str with '\0' */
-      vector_push(str, "\0");
-   }
+    {
+      if (vector_push(str, "\0"))
+       {
+         ret = 1;
+         goto ENDING_SECTION;
+       }
+    }
    else if (vector_size(arg_idx))
       vector_pop(arg_idx);
    /* assign approriate values to mysh_argc and mysh_argv */
@@ -137,6 +152,11 @@ int parse_cmd_args(const char *input)
    }
    argv_iter = mysh_argv;
    *argv_iter++ = vector_begin(str);
+   fputs("arg_idx: {", stdout);
+   for (int *iter = vector_begin(arg_idx), *ed = vector_end(arg_idx);
+        iter < ed; iter++)
+      printf("%d, ", *iter);
+   puts("}");
    for (int *iter = vector_begin(arg_idx), *ed = vector_end(arg_idx);
         iter < ed; iter++)
       *argv_iter++ = mysh_argv[0] + *iter;
@@ -149,6 +169,3 @@ ENDING_SECTION:
    return ret;
 }
 /*-------------------------- Exporte Functions END ---------------------------*/
-
-/*---------------------------- Private Functions -----------------------------*/
-/*-------------------------- Private Functions END ---------------------------*/

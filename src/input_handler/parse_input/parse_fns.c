@@ -118,7 +118,7 @@ int parse_token(const char **in_iter, Vector str)
       /* skip contiguous spaces */
       while (*++*in_iter == ' ') ;
       /* end loop if it's merely a sequence of spaces at the end */
-      if (**in_iter == '\0') return 0;
+      if (**in_iter == '\0' || **in_iter == '<' || **in_iter == '>') return 0;
       /* separate args */
       if (vector_push(str, "\0"))
          return 1;

@@ -38,10 +38,13 @@ int parse_redirection(const char **in_iter, Vector str)
    int err_code, ret = 0;
 
    /* parse fd_des */
-   str_iter = (char*)vector_end(str) - 1;
-   str_red = (char*)vector_begin(str) - 1;
+   if (str)
+    {
+      str_iter = (char*)vector_end(str) - 1;
+      str_red = (char*)vector_begin(str) - 1;
+    }
    /* file descriptor redirected should be 0 or 1 if not specified */
-   if (str_iter == str_red || *str_iter == '\0')
+   if (str == NULL || str_iter == str_red || *str_iter == '\0')
       fd_des = **in_iter == '<' ? 0 : 1;
    else
    {
@@ -105,8 +108,9 @@ int parse_redirection(const char **in_iter, Vector str)
       case 2:
          ret = err_code;
          goto ENDING_SECTION;
-      case 10:
       case 11:
+         ret = 11;
+      case 10:
          goto END_LOOP;
       case 22:
       default:
