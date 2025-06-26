@@ -152,11 +152,6 @@ int parse_cmd_args(const char *input)
    }
    argv_iter = mysh_argv;
    *argv_iter++ = vector_begin(str);
-   fputs("arg_idx: {", stdout);
-   for (int *iter = vector_begin(arg_idx), *ed = vector_end(arg_idx);
-        iter < ed; iter++)
-      printf("%d, ", *iter);
-   puts("}");
    for (int *iter = vector_begin(arg_idx), *ed = vector_end(arg_idx);
         iter < ed; iter++)
       *argv_iter++ = mysh_argv[0] + *iter;
